@@ -179,6 +179,7 @@ public final class TcpConnection implements Connection {
 
     private boolean doConnect() {
         List<String> address = allotClient.getServerAddress();
+        //todo 2017年10月19日10:18:10  拿到的列表未负载均衡 经查 在alloc的AllocHandler中每隔5分钟会以在线用户量排序
         if (address != null && address.size() > 0) {
             for (int i = 0; i < address.size(); i++) {
                 String[] host_port = address.get(i).split(":");
@@ -206,6 +207,7 @@ public final class TcpConnection implements Connection {
             channel.socket().setTcpNoDelay(true);
             channel.connect(new InetSocketAddress(host, port));
             logger.w("connect server ok [%s:%s]", host, port);
+            //此处调用会出发握手动作
             onConnected(channel);
             connLock.signalAll();
             connLock.unlock();

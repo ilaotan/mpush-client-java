@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit;
  * @author ohun@live.cn (夜色)
  */
 public class MPushClientTest {
-    private static final String publicKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCghPCWCobG8nTD24juwSVataW7iViRxcTkey/B792VZEhuHjQvA3cAJgx2Lv8GnX8NIoShZtoCg3Cx6ecs+VEPD2fBcg2L4JK7xldGpOJ3ONEAyVsLOttXZtNXvyDZRijiErQALMTorcgi79M5uVX9/jMv2Ggb2XAeZhlLD28fHwIDAQAB";
-    private static final String allocServer = "http://103.60.220.145:9999/";
+    private static final String publicKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUI2ikcv1uX5IPYSGuKzV0L+s6DOuU4hwK0LWJZc1IMLnOmsEAgm02RpX0hMYNwv9/7mgPBQw/oDiWuT+yB9vVfOSogCSSAA+rCaXrt0WhLkYsndw+STX0/Lg56fHDv5S/CIOh9Mc4em0TmFyhiXb59SMfUtS/9U99AvR8K4TLLwIDAQAB";
+    private static final String allocServer = "http://127.0.0.1:9999/";
 
     public static void main(String[] args) throws Exception {
         int count = 1;
@@ -55,7 +55,8 @@ public class MPushClientTest {
         ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         ClientListener listener = new L(scheduledExecutor);
         Client client = null;
-        String cacheDir = MPushClientTest.class.getResource("/").getFile();
+//        String cacheDir = MPushClientTest.class.getResource("/").getFile();
+        String cacheDir = "D:\\data\\";
         for (int i = 0; i < count; i++) {
             client = ClientConfig
                     .build()
