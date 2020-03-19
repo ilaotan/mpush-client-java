@@ -24,6 +24,8 @@ import com.mpush.api.Client;
 import com.mpush.api.Logger;
 import com.mpush.api.ack.AckCallback;
 import com.mpush.api.ack.AckContext;
+import com.mpush.api.ack.RetryCondition;
+import com.mpush.api.connection.Connection;
 import com.mpush.api.connection.SessionContext;
 import com.mpush.api.connection.SessionStorage;
 import com.mpush.api.http.HttpRequest;
@@ -215,8 +217,8 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
         ackRequestMgr.add(message.getSessionId(), AckContext
                 .build(this)
                 .setRequest(message.getPacket())
-                .setTimeout(1000)
-                .setRetryCount(3)
+                .setTimeout(config.getHandshakeTimeoutMills())
+                .setRetryCount(config.getHandshakeRetryCount())
         );
         logger.w("<<< do fast connect, message=%s", message);
         message.sendRaw();
@@ -239,9 +241,9 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
         message.encodeBody();
         ackRequestMgr.add(message.getSessionId(), AckContext
                 .build(this)
-                .setTimeout(1000)
                 .setRequest(message.getPacket())
-                .setRetryCount(3)
+                .setTimeout(config.getHandshakeTimeoutMills())
+                .setRetryCount(config.getHandshakeRetryCount())
         );
         logger.w("<<< do handshake, message=%s", message);
         message.send();
@@ -250,6 +252,11 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
 
     @Override
     public void bindUser(final String userId, final String tags) {
+        if (!connection.getSessionContext().handshakeOk()) {
+            logger.w("connection is not handshake ok!");
+            return;
+        }
+
         if (Strings.isBlank(userId)) {
             logger.w("bind user is null");
             return;
@@ -271,9 +278,15 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
         message.encodeBody();
         ackRequestMgr.add(message.getSessionId(), AckContext
                 .build(this)
-                .setTimeout(3000)
                 .setRequest(message.getPacket())
-                .setRetryCount(5)
+                .setTimeout(config.getBindUserTimeoutMills())
+                .setRetryCount(config.getBindUserRetryCount())
+                .setRetryCondition(new RetryCondition() {
+                    @Override
+                    public boolean test(Connection connection, Packet packet) {
+                        return connection.getSessionContext().handshakeOk();
+                    }
+                })
         );
         logger.w("<<< do bind user, userId=%s", userId);
         message.send();
@@ -282,6 +295,10 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
 
     @Override
     public void unbindUser() {
+        if (!connection.getSessionContext().handshakeOk()) {
+            logger.w("connection is not handshake ok!");
+            return;
+        }
         String userId = config.getUserId();
         if (Strings.isBlank(userId)) {
             logger.w("unbind user is null");
@@ -307,14 +324,15 @@ import static com.mpush.api.Constants.MAX_HB_TIMEOUT_COUNT;
 
     @Override
     public Future<Boolean> push(PushContext context) {
-        if (connection.getSessionContext().handshakeOk()) {
-            PushMessage message = new PushMessage(context.content, connection);
-            message.addFlag(context.ackModel.flag);
-            message.send();
-            logger.d("<<< send push message=%s", message);
-            return ackRequestMgr.add(message.getSessionId(), context);
+        if (!connection.getSessionContext().handshakeOk()) {
+            logger.w("connection is not handshake ok!");
+            return null;
         }
-        return null;
+        PushMessage message = new PushMessage(context.content, connection);
+        message.addFlag(context.ackModel.flag);
+        message.send();
+        logger.d("<<< send push message=%s", message);
+        return ackRequestMgr.add(message.getSessionId(), context);
     }
 
     @Override
